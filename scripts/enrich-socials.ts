@@ -44,9 +44,17 @@ function extractTiktokHandle(url: string): string | null {
 }
 
 async function enrichLinkedin(url: string, token: string): Promise<{ followers: number | null; lastPostAt: string | null } | null> {
+  // Discovery sometimes stores a company URL wrapped in extra path/query
+  // noise (an admin dashboard link, a `?viewAsMember=true` tail) — the
+  // actor only wants the bare company page, so we re-derive it from the
+  // slug/id rather than passing the stored URL through as-is.
+  const slug = extractLinkedinSlug(url);
+  if (!slug) return null;
+  const cleanUrl = `https://www.linkedin.com/company/${slug}`;
+
   const items = await runApifyActor(
     "automation-lab~linkedin-company-scraper",
-    { companyUrls: [url] },
+    { companyUrls: [cleanUrl] },
     token
   );
   const item = items[0];

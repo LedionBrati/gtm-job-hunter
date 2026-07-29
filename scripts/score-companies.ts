@@ -1,7 +1,6 @@
 import dotenv from "dotenv";
 import { supabaseAdmin } from "../lib/supabase";
 import { relevantPlatforms } from "../lib/platform-relevance";
-import { pca2 } from "../lib/pca";
 
 dotenv.config({ path: ".env.local" });
 
@@ -27,6 +26,24 @@ interface Reason {
   points: number;
   evidence: string;
 }
+
+// How presence_gap_score and fit_score combine into total_score.
+//
+// These were briefly derived via PCA (first principal component of the two
+// scores) to avoid asserting a split by hand. That was the wrong tool:
+//   - The two scores are mildly NEGATIVELY correlated across the dataset
+//     (r ~= -0.13), so the max-variance direction is the "seesaw" axis and
+//     the eigenvector comes out with mixed signs — fit landed at -0.998,
+//     which ranked well-fitting companies LAST.
+//   - Even sign-corrected, PCA on two standardized variables is always
+//     exactly 50/50 regardless of correlation, and on raw (unstandardized)
+//     scores it just mirrors how wide each score's point scheme happens to
+//     be (fit's variance is ~6x the gap's purely by construction).
+// So PCA cannot express a preference between exactly two inputs — the
+// preference has to be a judgement call. The detected presence gap IS the
+// pitch, so it carries the larger share.
+const GAP_WEIGHT = 0.6;
+const FIT_WEIGHT = 0.4;
 
 // Per-platform gap contribution, 0 (no gap) to 1 (max gap), plus the
 // evidence sentence explaining why. Followers are log-scaled since raw
@@ -120,16 +137,11 @@ async function main() {
     return { company, presence, fit };
   });
 
-  const { weights, explainedVarianceRatio } = pca2(
-    computed.map((c) => [c.presence.score, c.fit.score] as [number, number])
-  );
-  const [wGap, wFit] = weights;
-
-  console.log(`PCA weights — presence_gap: ${wGap.toFixed(3)}, fit: ${wFit.toFixed(3)} (explained variance: ${(explainedVarianceRatio * 100).toFixed(1)}%)`);
+  console.log(`Weights — presence_gap: ${GAP_WEIGHT}, fit: ${FIT_WEIGHT}`);
 
   let written = 0;
   for (const [i, { company, presence, fit }] of computed.entries()) {
-    const totalScore = Math.round(wGap * presence.score + wFit * fit.score);
+    const totalScore = Math.round(GAP_WEIGHT * presence.score + FIT_WEIGHT * fit.score);
     const reasons = [...presence.reasons, ...fit.reasons];
 
     const { error: upsertError } = await supabase.from("scores").insert({
@@ -149,7 +161,7 @@ async function main() {
 
   console.log(`\n=== Scoring summary ===`);
   console.log(`Scores written: ${written}`);
-  console.log(`PCA weights: presence_gap=${wGap.toFixed(3)}, fit=${wFit.toFixed(3)}`);
+  console.log(`Weights: presence_gap=${GAP_WEIGHT}, fit=${FIT_WEIGHT}`);
 }
 
 main();
