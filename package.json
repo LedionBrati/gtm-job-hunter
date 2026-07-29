@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "import:yc": "tsx scripts/import-yc.ts"
+    "import:yc": "tsx scripts/import-yc.ts",
+    "discover:socials": "tsx scripts/discover-socials.ts",
+    "enrich:socials": "tsx scripts/enrich-socials.ts",
+    "score:companies": "tsx scripts/score-companies.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.7",
