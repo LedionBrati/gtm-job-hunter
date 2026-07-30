@@ -17,6 +17,30 @@ export function relevantPlatforms(industry: string | null): string[] {
   return INDUSTRY_PLATFORMS[industry] ?? DEFAULT_PLATFORMS;
 }
 
+// Human-facing platform names. Evidence strings are read by people (the
+// dashboard) and by Claude (Part 5's outreach drafts), so raw keys like "x"
+// or "linkedin" must never reach prose.
+export const PLATFORM_DISPLAY: Record<string, string> = {
+  linkedin: "LinkedIn",
+  x: "X",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  github: "GitHub",
+};
+
+/** Two-letter form for dense UI (the presence strip). */
+export const PLATFORM_ABBR: Record<string, string> = {
+  linkedin: "LI",
+  x: "X",
+  instagram: "IG",
+  tiktok: "TT",
+  github: "GH",
+};
+
+export function platformName(platform: string): string {
+  return PLATFORM_DISPLAY[platform] ?? platform;
+}
+
 export const PLATFORM_DOMAINS: Record<string, RegExp> = {
   linkedin: /https?:\/\/(?:www\.)?linkedin\.com\/company\/([a-zA-Z0-9_-]+)/,
   x: /https?:\/\/(?:www\.)?(?:x|twitter)\.com\/([a-zA-Z0-9_]+)/,

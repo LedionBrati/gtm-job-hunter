@@ -19,7 +19,11 @@ function daysSince(iso: string): number {
   return (Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24);
 }
 
-async function runApifyActor(actorId: string, input: unknown, token: string): Promise<any[]> {
+// Actor payloads vary per scraper, so items stay loosely typed and each
+// enrich* function picks out only the fields it knows about.
+type ApifyItem = Record<string, unknown>;
+
+async function runApifyActor(actorId: string, input: unknown, token: string): Promise<ApifyItem[]> {
   const res = await fetch(
     `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${token}`,
     {
@@ -61,7 +65,7 @@ async function enrichLinkedin(url: string, token: string): Promise<{ followers: 
   if (!item) return null;
   // This actor returns company profile stats only — no posting activity,
   // so lastPostAt stays null (freshness is unknown, not assumed dead).
-  return { followers: item.followerCount ?? null, lastPostAt: null };
+  return { followers: asNumber(item.followerCount), lastPostAt: null };
 }
 
 async function enrichTiktok(url: string, token: string): Promise<{ followers: number | null; lastPostAt: string | null } | null> {
@@ -74,10 +78,41 @@ async function enrichTiktok(url: string, token: string): Promise<{ followers: nu
   );
   const item = items[0];
   if (!item) return null;
+  const authorMeta = (item.authorMeta ?? {}) as Record<string, unknown>;
   return {
-    followers: item.authorMeta?.fans ?? null,
-    lastPostAt: item.createTimeISO ?? null,
+    followers: asNumber(authorMeta.fans),
+    lastPostAt: typeof item.createTimeISO === "string" ? item.createTimeISO : null,
   };
+}
+
+function asNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+interface EnrichableRow {
+  id: string;
+  company_id: string;
+  platform: string;
+  url: string | null;
+  companies: {
+    name: string;
+    is_hiring: boolean | null;
+    team_size: number | null;
+    yc_batch: string | null;
+  } | null;
+}
+
+// Spend the limited Apify budget on the companies most worth messaging first.
+function priority(company: EnrichableRow["companies"]): number {
+  if (!company) return 0;
+  let score = 0;
+  if (company.is_hiring) score += 30;
+  if (company.team_size !== null && company.team_size >= 3 && company.team_size <= 20) {
+    score += 40;
+  }
+  if (company.yc_batch === "W26") score += 30;
+  else if (company.yc_batch === "S25" || company.yc_batch === "W25") score += 20;
+  return score;
 }
 
 async function main() {
@@ -94,17 +129,10 @@ async function main() {
     .not("url", "is", null);
   if (error) throw error;
 
-  let ranked = [...(rows ?? [])].sort((a: any, b: any) => {
-    const score = (c: any) => {
-      let s = 0;
-      if (c?.is_hiring) s += 30;
-      if (c?.team_size >= 3 && c?.team_size <= 20) s += 40;
-      if (c?.yc_batch === "W26") s += 30;
-      else if (c?.yc_batch === "S25" || c?.yc_batch === "W25") s += 20;
-      return s;
-    };
-    return score(b.companies) - score(a.companies);
-  });
+  const socialRows = (rows ?? []) as unknown as EnrichableRow[];
+  let ranked = [...socialRows].sort(
+    (a, b) => priority(b.companies) - priority(a.companies)
+  );
   if (process.env.TEST_LIMIT) {
     ranked = ranked.slice(0, Number(process.env.TEST_LIMIT));
   }
@@ -116,7 +144,7 @@ async function main() {
   let failed = 0;
 
   for (const [i, row] of ranked.entries()) {
-    const companyName = (row as any).companies?.name ?? "?";
+    const companyName = row.companies?.name ?? "?";
     try {
       const result =
         row.platform === "linkedin"

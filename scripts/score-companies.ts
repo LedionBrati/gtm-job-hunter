@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import { supabaseAdmin } from "../lib/supabase";
-import { relevantPlatforms } from "../lib/platform-relevance";
+import { relevantPlatforms, platformName } from "../lib/platform-relevance";
 
 dotenv.config({ path: ".env.local" });
 
@@ -50,12 +50,13 @@ const FIT_WEIGHT = 0.4;
 // counts are heavily right-skewed; a flat cap of 5,000 followers reaches
 // "full reach" for a young YC-stage company's social presence.
 function platformGap(social: SocialRow | undefined, platform: string): { gap: number; evidence: string } {
+  const name = platformName(platform);
   if (!social || social.status === "not_found") {
-    return { gap: 1, evidence: `No ${platform} account found` };
+    return { gap: 1, evidence: `No ${name} account found` };
   }
   if (social.status === "found") {
     // URL known but not enriched (Instagram/X, or LinkedIn's activity-blind actor)
-    return { gap: 0.6, evidence: `${platform} account found but not yet enriched (followers/activity unknown)` };
+    return { gap: 0.6, evidence: `${name} account found but not yet enriched (followers/activity unknown)` };
   }
 
   const followers = social.followers ?? 0;
@@ -76,7 +77,7 @@ function platformGap(social: SocialRow | undefined, platform: string): { gap: nu
         : "activity unknown";
   return {
     gap,
-    evidence: `${platform}: ${followers} followers, ${staleDesc}`,
+    evidence: `${name}: ${followers} followers, ${staleDesc}`,
   };
 }
 

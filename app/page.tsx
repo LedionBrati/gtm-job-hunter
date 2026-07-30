@@ -1,65 +1,220 @@
-import Image from "next/image";
+import Link from "next/link";
+import { getRankedCompanies, getBatches, type Company } from "@/lib/queries";
+import { platformName } from "@/lib/platform-relevance";
+import { PresenceStrip, PresenceLegend } from "@/components/presence-strip";
+import { ScoreMark, StageChip } from "@/components/score-mark";
 
-export default function Home() {
+// Always read live DB state — a stale ranking is worse than a slow one.
+export const dynamic = "force-dynamic";
+
+// The punchiest one-line version of why this company is a target. Confirmed
+// absences are the strongest pitch material, so they lead; if nothing is
+// outright missing, fall back to the weakest platform's evidence.
+function gapSummary(company: Company): string {
+  const reasons = company.score?.reasons ?? [];
+  const gaps = reasons.filter((r) => r.criterion.startsWith("presence_gap_"));
+  if (gaps.length === 0) return company.one_liner ?? "Not yet scored";
+
+  const missing = gaps
+    .filter((r) => /^No /i.test(r.evidence))
+    .map((r) => r.criterion.replace("presence_gap_", ""))
+    .map(platformName);
+
+  if (missing.length > 0) return `no ${missing.join(" · no ")}`;
+
+  const weakest = [...gaps].sort((a, b) => b.points - a.points)[0];
+  return weakest.evidence.toLowerCase();
+}
+
+function parseFilters(params: Record<string, string | string[] | undefined>) {
+  const one = (key: string) => {
+    const value = params[key];
+    return Array.isArray(value) ? value[0] : value;
+  };
+  const min = Number(one("min"));
+  return {
+    batch: one("batch") || undefined,
+    hiring: one("hiring") === "1",
+    minScore: Number.isFinite(min) && min > 0 ? min : undefined,
+  };
+}
+
+export default async function RankedPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const filters = parseFilters(params);
+
+  const [companies, batches] = await Promise.all([
+    getRankedCompanies(filters),
+    getBatches(),
+  ]);
+
+  const zeroPresence = companies.filter((c) =>
+    c.platforms.every((p) => {
+      const social = c.socials.find((s) => s.platform === p);
+      return !social || social.status === "not_found";
+    })
+  ).length;
+  const hiring = companies.filter((c) => c.is_hiring).length;
+  const filtered = Boolean(filters.batch || filters.hiring || filters.minScore);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="relative overflow-hidden">
+      <span
+        className="ghost-word absolute -top-6 right-0 hidden text-[13rem] lg:block"
+        aria-hidden="true"
+      >
+        GAPS
+      </span>
+
+      <div className="relative mx-auto max-w-[1240px] px-6 pt-12">
+        <span className="label">The list</span>
+        <h1 className="headline mt-5 max-w-3xl">
+          {companies.length} YC startups,
+          <br />
+          ranked by what they&apos;re <span className="ac">missing</span>.
+        </h1>
+
+        <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3">
+          <Stat value={companies.length} label="in view" />
+          <Stat value={zeroPresence} label="zero presence" />
+          <Stat value={hiring} label="hiring" />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        {/* Plain GET form: filters survive refresh and links, no client JS. */}
+        <form className="mt-10 flex flex-wrap items-end gap-4 border-y border-hair py-5">
+          <label className="flex flex-col gap-2">
+            <span className="label-muted">Batch</span>
+            <select
+              name="batch"
+              defaultValue={filters.batch ?? ""}
+              className="field w-40"
+            >
+              <option value="">All batches</option>
+              {batches.map(({ batch, count }) => (
+                <option key={batch} value={batch}>
+                  {batch} ({count})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="label-muted">Min score</span>
+            <select
+              name="min"
+              defaultValue={String(filters.minScore ?? "")}
+              className="field w-36"
+            >
+              <option value="">Any</option>
+              <option value="60">60+</option>
+              <option value="70">70+</option>
+              <option value="80">80+</option>
+              <option value="85">85+</option>
+            </select>
+          </label>
+
+          <label className="flex cursor-pointer items-center gap-2.5 pb-2.5">
+            <input
+              type="checkbox"
+              name="hiring"
+              value="1"
+              defaultChecked={filters.hiring}
+              className="h-3.5 w-3.5 accent-[var(--accent)]"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <span className="label-muted">Hiring only</span>
+          </label>
+
+          <button type="submit" className="btn mb-1">
+            Apply
+          </button>
+          {filtered && (
+            <Link href="/" className="btn btn-ghost mb-1">
+              Reset
+            </Link>
+          )}
+        </form>
+
+        <div className="mt-5">
+          <PresenceLegend />
         </div>
-      </main>
+      </div>
+
+      <ol className="relative mx-auto mt-8 max-w-[1240px]">
+        {companies.map((company, i) => (
+          <li key={company.id} className="border-t border-hair last:border-b">
+            <Link
+              href={`/company/${company.id}`}
+              className="row-nudge grid grid-cols-[3.25rem_1fr] items-start gap-x-4 px-6 py-3.5 no-underline sm:grid-cols-[3.25rem_1fr_auto]"
+            >
+              <div className="flex flex-col items-start pt-0.5">
+                <ScoreMark value={company.score?.total_score ?? null} />
+                <span className="label-muted mt-1">#{i + 1}</span>
+              </div>
+
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h2 className="font-display text-[1.05rem] font-bold tracking-[-0.01em] text-text">
+                    {company.name}
+                  </h2>
+                  <span className="label-muted">
+                    {[
+                      company.yc_batch,
+                      company.team_size !== null
+                        ? `${company.team_size} people`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                  {company.is_hiring && (
+                    <span className="text-[0.58rem] uppercase tracking-[0.14em] text-accent">
+                      hiring
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <PresenceStrip
+                    platforms={company.platforms}
+                    socials={company.socials}
+                  />
+                  <span className="truncate text-[0.78rem] text-muted">
+                    {gapSummary(company)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="hidden pt-1.5 sm:block">
+                <StageChip stage={company.outreach[0]?.stage ?? null} />
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ol>
+
+      {companies.length === 0 && (
+        <p className="mx-auto max-w-[1240px] px-6 py-16 text-[0.85rem] text-dim">
+          Nothing matches those filters.{" "}
+          <Link href="/" className="text-accent underline-grow no-underline">
+            Clear them
+          </Link>
+          .
+        </p>
+      )}
     </div>
+  );
+}
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <span className="flex items-baseline gap-2">
+      <span className="font-display text-[1.35rem] font-extrabold tabular-nums text-text">
+        {value}
+      </span>
+      <span className="label-muted">{label}</span>
+    </span>
   );
 }
