@@ -125,7 +125,7 @@ export function CompanyForm({
       {state.error && (
         <p
           role="alert"
-          className="mt-7 border-l-2 border-accent bg-accent-dim px-4 py-3 text-[0.8rem] text-text"
+          className="mt-7 border-l-2 border-accent bg-accent-dim px-4 py-3 text-[0.9rem] text-text"
         >
           {state.error}
         </p>
@@ -140,10 +140,10 @@ export function CompanyForm({
         </Link>
       </div>
 
-      <p className="mt-8 text-[0.75rem] leading-[1.8] text-muted">
+      <p className="mt-8 max-w-[58ch] text-[0.875rem] leading-[1.65] text-meta">
         Scores are not recalculated here. Run{" "}
-        <code className="text-dim">npm run score:companies</code> after adding
-        companies so the ranking picks them up.
+        <code className="font-mono text-dim">npm run score:companies</code> after
+        adding companies so the ranking picks them up.
       </p>
     </form>
   );

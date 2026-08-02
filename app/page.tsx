@@ -152,7 +152,12 @@ export default async function RankedPage({
             >
               <div className="flex flex-col items-start pt-0.5">
                 <ScoreMark value={company.score?.total_score ?? null} />
-                <span className="label-muted mt-1">#{i + 1}</span>
+                {/* Deliberately quieter than the score. Two numbers stacked in
+                    one 3.25rem column will be confused for each other unless
+                    one of them clearly loses. */}
+                <span className="mt-1 font-mono text-[0.62rem] tracking-[0.1em] text-[#5f5f5f]">
+                  #{i + 1}
+                </span>
               </div>
 
               <div className="min-w-0">
@@ -171,7 +176,7 @@ export default async function RankedPage({
                       .join(" · ")}
                   </span>
                   {company.is_hiring && (
-                    <span className="text-[0.58rem] uppercase tracking-[0.14em] text-accent">
+                    <span className="font-mono text-[0.65rem] uppercase tracking-[0.08em] text-accent">
                       hiring
                     </span>
                   )}
@@ -181,7 +186,9 @@ export default async function RankedPage({
                     platforms={company.platforms}
                     socials={company.socials}
                   />
-                  <span className="truncate text-[0.78rem] text-muted">
+                  {/* The actual reason to care about this row — it was the
+                      smallest, faintest text on the page. Now the opposite. */}
+                  <span className="truncate text-[0.875rem] text-dim">
                     {gapSummary(company)}
                   </span>
                 </div>
@@ -196,7 +203,7 @@ export default async function RankedPage({
       </ol>
 
       {companies.length === 0 && (
-        <p className="mx-auto max-w-[1240px] px-6 py-16 text-[0.85rem] text-dim">
+        <p className="mx-auto max-w-[1240px] px-6 py-16 text-[0.9rem] text-dim">
           Nothing matches those filters.{" "}
           <Link href="/" className="text-accent underline-grow no-underline">
             Clear them

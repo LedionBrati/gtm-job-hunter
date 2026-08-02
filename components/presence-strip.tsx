@@ -47,7 +47,7 @@ export function PresenceStrip({
             className="flex items-center gap-1.5"
             title={describe(platform, social)}
           >
-            <span className="text-[0.55rem] uppercase tracking-[0.1em] text-muted">
+            <span className="font-mono text-[0.65rem] uppercase tracking-[0.04em] text-meta">
               {PLATFORM_ABBR[platform] ?? platform}
             </span>
             <span

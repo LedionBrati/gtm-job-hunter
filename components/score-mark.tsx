@@ -1,7 +1,18 @@
-// The score's visual weight tracks its value, reusing the site's ghost
-// numeral: weak targets are outlined and recede into the page, strong ones
-// are solid amber. Scanning the list, the eye is pulled to the 80s and 90s
-// without needing a colour scale.
+// The score's visual weight still tracks its value — strong targets pull the
+// eye, weak ones recede — but it does that with fill colour, not with an
+// outline.
+//
+// The original used the site's ghost numeral for anything under 80:
+// `color: transparent` over a 1px stroke. At hero size behind a headline that
+// device is gorgeous. At 30px in a list column it stops being a dim number and
+// becomes a hairline drawing of a number — the strokes are thinner than the
+// text around it, so the digit you most need to read is the least legible mark
+// on the row. Ledi's report was exactly this: the numbers weren't clear.
+//
+// So: a three-step solid ramp instead. Amber → off-white → warm grey. Same
+// hierarchy, same one-glance scan, every digit actually readable. The ghost
+// outline is still used where it belongs — the giant `GAPS` word behind the
+// hero, which nobody has to read.
 export function ScoreMark({
   value,
   size = "md",
@@ -9,15 +20,18 @@ export function ScoreMark({
   value: number | null;
   size?: "md" | "lg";
 }) {
+  // Mono, not Syne: these are figures in a column that should align digit-for
+  // -digit down 531 rows, and Syne extrabold at -0.04em set "90" tight enough
+  // that the two glyphs merged at small sizes.
   const dims =
     size === "lg"
-      ? "text-[3.75rem] leading-none"
-      : "text-[1.9rem] leading-none";
+      ? "text-[3.5rem] leading-none"
+      : "text-[1.75rem] leading-none";
 
   if (value === null) {
     return (
       <span
-        className={`font-display font-extrabold ${dims} text-muted`}
+        className={`font-mono font-bold ${dims} text-muted`}
         title="Not yet scored"
       >
         —
@@ -25,22 +39,18 @@ export function ScoreMark({
     );
   }
 
-  const strong = value >= 80;
-  const mid = value >= 65 && value < 80;
-
-  const style = strong
-    ? { color: "var(--accent)" }
-    : mid
-      ? { color: "var(--text)" }
-      : {
-          color: "transparent",
-          WebkitTextStroke: "1px var(--text-muted)",
-        };
+  // #6f6a62 is 3.7:1 on --bg. Below the 4.5:1 body-text floor, but these are
+  // 28px bold figures, which AA scores against the 3:1 large-text floor.
+  const tone =
+    value >= 80
+      ? "text-accent"
+      : value >= 65
+        ? "text-[#d8d2c6]"
+        : "text-[#6f6a62]";
 
   return (
     <span
-      className={`font-display font-extrabold tabular-nums tracking-[-0.04em] ${dims}`}
-      style={style}
+      className={`font-mono font-bold tabular-nums tracking-[-0.02em] ${dims} ${tone}`}
     >
       {value}
     </span>
@@ -65,7 +75,7 @@ export function StageChip({ stage }: { stage: string | null }) {
   const warm = effective === "replied" || effective === "meeting";
   return (
     <span
-      className={`border px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.14em] ${
+      className={`border px-2 py-0.5 font-mono text-[0.65rem] uppercase tracking-[0.08em] ${
         warm
           ? "border-accent bg-accent-dim text-accent"
           : "border-hair text-dim"

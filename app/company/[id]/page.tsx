@@ -61,7 +61,7 @@ export default async function CompanyPage({
           <div className="min-w-0 flex-1">
             <h1 className="headline">{company.name}</h1>
             {company.one_liner && (
-              <p className="mt-4 max-w-2xl text-[0.95rem] leading-[1.9] text-dim">
+              <p className="mt-4 max-w-[58ch] text-[1rem] leading-[1.7] text-dim">
                 {company.one_liner}
               </p>
             )}
@@ -79,7 +79,7 @@ export default async function CompanyPage({
                   </span>
                 ))}
               {company.is_hiring && (
-                <span className="text-[0.58rem] uppercase tracking-[0.14em] text-accent">
+                <span className="font-mono text-[0.65rem] uppercase tracking-[0.08em] text-accent">
                   hiring
                 </span>
               )}
@@ -200,7 +200,7 @@ export default async function CompanyPage({
         <section className="mt-14">
           <span className="label">Who to message</span>
           {company.contacts.length === 0 ? (
-            <p className="mt-6 text-[0.85rem] text-muted">
+            <p className="mt-6 text-[0.9rem] text-meta">
               No contacts captured for this company yet.
             </p>
           ) : (
@@ -217,7 +217,7 @@ export default async function CompanyPage({
                     <span className="label-muted">{contact.role}</span>
                   )}
                   {contact.is_founder && (
-                    <span className="text-[0.58rem] uppercase tracking-[0.14em] text-accent">
+                    <span className="font-mono text-[0.65rem] uppercase tracking-[0.08em] text-accent">
                       founder
                     </span>
                   )}
@@ -227,7 +227,7 @@ export default async function CompanyPage({
                         href={contact.linkedin_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[0.75rem] text-accent underline-grow no-underline"
+                        className="text-[0.85rem] text-accent underline-grow no-underline"
                       >
                         LinkedIn ↗
                       </a>
@@ -235,7 +235,7 @@ export default async function CompanyPage({
                     {contact.email && (
                       <a
                         href={`mailto:${contact.email}`}
-                        className="text-[0.75rem] text-accent underline-grow no-underline"
+                        className="text-[0.85rem] text-accent underline-grow no-underline"
                       >
                         {contact.email}
                       </a>
@@ -288,14 +288,16 @@ function SubScore({
         {reasons.map((reason) => (
           <li key={reason.criterion} className="flex gap-3">
             <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
-            <span className="text-[0.8rem] leading-[1.75] text-dim">
+            <span className="text-[0.9rem] leading-[1.65] text-dim">
               {reason.evidence}
-              <span className="ml-2 text-muted">+{reason.points}</span>
+              <span className="ml-2 font-mono text-[0.8rem] tabular-nums text-meta">
+                +{reason.points}
+              </span>
             </span>
           </li>
         ))}
         {reasons.length === 0 && (
-          <li className="text-[0.8rem] text-muted">No evidence recorded.</li>
+          <li className="text-[0.9rem] text-meta">No evidence recorded.</li>
         )}
       </ul>
     </div>
@@ -315,7 +317,7 @@ function Td({
 }) {
   return (
     <td
-      className={`py-3 pr-4 text-[0.8rem] ${accent ? "text-accent" : "text-dim"}`}
+      className={`py-3 pr-4 text-[0.875rem] ${accent ? "text-accent" : "text-dim"}`}
     >
       {children}
     </td>

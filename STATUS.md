@@ -89,7 +89,11 @@ automation**. To screenshot, navigate with credentials embedded in the URL
   the stored URL; would need a fresh lookup. Ledi decided it's not worth it.
 - **1 duplicate `socials` row** (two empty `not_found` LinkedIn rows for one
   company, from Jul 22). Harmless — scoring reads the first match per platform.
-- **The dashboard has never been visually reviewed.** The Chrome extension could
+- **Ledi reviewed the dashboard on 2026-08-01** and the verdict was that it was
+  hard to read. A typography pass followed (see Design system above): Archivo
+  for prose, mono demoted to structural roles, labels enlarged and de-tracked,
+  contrast raised to AA. His remaining open questions below are still open.
+- **The original build was never visually reviewed.** The Chrome extension could
   not pair (it is installed only in Chrome's `Default` profile, whose claude.ai
   login is `lediobrati@gmail.com`, while Claude Code was authenticated as
   `ledion.brati@theagi.company`). Everything was verified via rendered HTML,
@@ -107,20 +111,53 @@ any styling. Tokens live in `app/globals.css`:
 - `--bg #0a0a0a`, cards `#111` / hover `#161616`, `--text #f0ece4` (warm
   off-white, *not* pure white), dim `#999`, muted `#555`, border `#1c1c1c`
 - One accent: amber `--accent #e8a020`, wash `rgba(232,160,32,0.12)`
-- **Syne** (700/800) for display and names; **Space Mono** for everything else,
-  including headlines — mono uppercase with `-0.03em` tracking is the site's
-  signature inversion. Never Inter/Roboto/system fonts.
-- Tiny labels: 0.62rem, 0.2–0.3em tracking, uppercase, amber
+- **Syne** (700/800) for display and names; **Space Mono** for headlines,
+  labels, chips, buttons, form fields and figures — mono uppercase with
+  `-0.03em` tracking is the site's signature inversion, and it is kept.
+  **Archivo** (added 2026-08-01) carries body prose. Never Inter/Roboto/system.
+- ⚠️ **Do not put mono back on `body`.** Ledi read the deployed dashboard and
+  could not follow it: "the letters are very wide." That is monospace doing
+  what monospace does — uniform advance widths — over a 531-row list, which the
+  one-page personal site never has to survive. Mono is now opted *into* per
+  element, never inherited. Keep it that way.
+- Labels: 0.68–0.7rem, 0.08–0.18em tracking, uppercase. The old 0.58rem/0.2em
+  was unreadable; wide tracking is for 1–2 word section titles only, never
+  sentences.
+- Text colours are a 3-step ramp with fixed jobs — `--text` for names,
+  `--text-dim #999` (7:1) for prose, `--text-meta #8a8a8a` (5.7:1) for
+  metadata, and `--text-muted #555` for **decoration only**. #555 is 2.7:1 on
+  `--bg`, under the 4.5:1 floor: it must never carry a word that has to be
+  read. It previously held each row's gap summary — the single most important
+  sentence on the page.
 - Devices carried over: fractal-noise overlay at 0.025 opacity; outlined
   transparent "ghost" text (`-webkit-text-stroke`); hairline rules; amber
   underline growing 0→100% on hover; `gap: 1px` over a border-coloured
   background to make hairline grids.
 
 The core visual idea: **the ghost-outline device encodes data, not decoration.**
-A missing account is a hollow ring barely above the background so a high-gap
-company reads as perforated; the score numeral is outlined when weak and solid
-amber when strong. Preserve that if you touch `components/presence-strip.tsx`
-or `components/score-mark.tsx`.
+A missing account is a hollow ring; the score numeral's weight tracks its value.
+Preserve *that idea* in `components/presence-strip.tsx` and
+`components/score-mark.tsx` — but note how it is now implemented, and why:
+
+- **Score numerals are solid, never outlined** (changed 2026-08-01). They used
+  `color: transparent` + a 1px `#555` stroke below 80. At hero size that device
+  is beautiful; at 30px in a list column it renders the digit as a hairline
+  sketch thinner than the text around it, so the number you most need to read
+  became the least legible mark on the row — Ledi's actual complaint. Now a
+  three-step solid ramp: amber ≥80, `#d8d2c6` 65–79, `#6f6a62` below. Same
+  hierarchy, all readable. Outline is reserved for the `GAPS` hero word, which
+  nobody has to read.
+- **Score numerals are Space Mono, not Syne.** Syne extrabold at `-0.04em` set
+  "90" tight enough that the glyphs merged; mono also aligns digit-for-digit
+  down 531 rows.
+- **`--void` is `#6a655c`, not `#2b2b2b`.** The old value was 1.4:1 on `--bg`,
+  so "no account found" — the product's entire thesis — rendered as almost
+  nothing at 8px. 3.2:1 now, still clearly empty beside a filled amber dot.
+
+**General rule this project learned the hard way:** a device that encodes data
+must survive being *read*. If expressing the value costs legibility of the
+value, the encoding lost — move the expression to colour, weight or position
+and keep the glyph solid.
 
 Ledi's global instructions (`~/.claude/CLAUDE.md`) have firm frontend rules —
 distinctive fonts, committed aesthetic, purposeful motion. Follow them.

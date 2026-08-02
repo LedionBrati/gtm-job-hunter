@@ -13,13 +13,22 @@
   --bg-deep: #080808;
   --text: #f0ece4;
   --text-dim: #999999;
+  /* Metadata that must still be *read* (batch, role, legends, table heads).
+     #555 was the old value and lands at 2.7:1 on --bg — under the 4.5:1 floor,
+     which is why the page felt like squinting. This is 5.7:1. */
+  --text-meta: #8a8a8a;
+  /* Genuinely decorative only: separators, "/100" suffixes, disabled dashes.
+     Never put a word here that the reader needs. */
   --text-muted: #555555;
   --accent: #e8a020;
   --accent-dim: rgba(232, 160, 32, 0.12);
   --border: #1c1c1c;
-  /* One step lighter than --border: for voids that must read as
-     "deliberately empty" rather than as a structural rule. */
-  --void: #2b2b2b;
+  /* The hollow ring on an absent platform. Was #2b2b2b — 1.4:1 on --bg, which
+     made "this company has no X account" render as very nearly nothing at 8px.
+     That absence is the product's whole thesis, so it has to be visible: this
+     is 3.2:1, the AA floor for a non-text graphic, and still reads as empty
+     next to a filled amber dot. */
+  --void: #6a655c;
 }
 
 @theme inline {
@@ -29,6 +38,7 @@
   --color-deep: var(--bg-deep);
   --color-text: var(--text);
   --color-dim: var(--text-dim);
+  --color-meta: var(--text-meta);
   --color-muted: var(--text-muted);
   --color-accent: var(--accent);
   --color-accent-dim: var(--accent-dim);
@@ -37,6 +47,7 @@
 
   --font-display: var(--font-syne);
   --font-mono: var(--font-space-mono);
+  --font-text: var(--font-archivo);
 }
 
 *,
@@ -45,12 +56,15 @@
   box-sizing: border-box;
 }
 
+/* Archivo is the default: a narrow grotesque, so a row of text occupies far
+   less width than the same row in Space Mono and the word shapes differ from
+   each other. Mono is opted *into* below, never inherited. */
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-space-mono), monospace;
+  font-family: var(--font-archivo), sans-serif;
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -70,28 +84,36 @@ body::before {
    TYPE UTILITIES
    ============================================================= */
 
-/* The site's tiny amber section eyebrow. */
+/* The site's amber section eyebrow. Wide tracking is the device, but it only
+   works on 1–2 words — these are section titles, never sentences. */
 .label {
+  font-family: var(--font-space-mono), monospace;
   font-weight: 700;
-  font-size: 0.62rem;
-  letter-spacing: 0.28em;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
+/* Inline metadata: batch, role, table heads. Was 0.58rem/0.2em in #555, which
+   is three separate legibility taxes at once — small, tracked and low-contrast.
+   Bigger, tighter and brighter; still unmistakably the same device. */
 .label-muted {
+  font-family: var(--font-space-mono), monospace;
   font-weight: 400;
-  font-size: 0.58rem;
-  letter-spacing: 0.2em;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-meta);
 }
 
-/* Mono, uppercase, tight — the site's headline treatment. */
+/* Mono, uppercase, tight — the site's headline treatment, kept verbatim.
+   Mono earns its place at display size; this is the signature. */
 .headline {
+  font-family: var(--font-space-mono), monospace;
   font-weight: 700;
   font-size: clamp(1.5rem, 3vw, 2.4rem);
-  line-height: 1.06;
+  line-height: 1.12;
   letter-spacing: -0.03em;
   text-transform: uppercase;
 }
@@ -143,10 +165,11 @@ body::before {
   display: inline-block;
   padding: 0.4rem 0.85rem;
   border: 1px solid var(--border);
-  font-size: 0.62rem;
-  letter-spacing: 0.12em;
+  font-family: var(--font-space-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-meta);
   text-decoration: none;
   transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
@@ -170,9 +193,9 @@ body::before {
   background: var(--accent);
   color: var(--bg);
   font-family: var(--font-space-mono), monospace;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   border: none;
   cursor: pointer;
@@ -211,13 +234,16 @@ body::before {
    FORM CONTROLS
    Native controls restyled to the hairline-on-black language.
    ============================================================= */
+/* Mono here is deliberate and stays: these hold URLs, handles and slugs, where
+   fixed widths and an unmistakable 0/O and 1/l are worth more than narrowness.
+   Only the size moves. */
 .field {
   width: 100%;
   background: var(--bg-deep);
   border: 1px solid var(--border);
   color: var(--text);
   font-family: var(--font-space-mono), monospace;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   padding: 0.7rem 0.85rem;
   transition: border-color 0.2s;
 }
