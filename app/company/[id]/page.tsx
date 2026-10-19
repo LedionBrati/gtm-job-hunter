@@ -4,6 +4,8 @@ import { getCompany, type Reason } from "@/lib/queries";
 import { platformName } from "@/lib/platform-relevance";
 import { PresenceStrip } from "@/components/presence-strip";
 import { ScoreMark, StageChip } from "@/components/score-mark";
+import { OutreachPanel } from "@/components/outreach-panel";
+import { StageControl } from "@/components/stage-control";
 
 export const dynamic = "force-dynamic";
 
@@ -245,6 +247,28 @@ export default async function CompanyPage({
               ))}
             </ul>
           )}
+        </section>
+
+        {/* Where this one stands in the pipeline */}
+        <section className="mt-14">
+          <span className="label">Pipeline</span>
+          <StageControl
+            companyId={company.id}
+            stage={outreach?.stage ?? null}
+            nextFollowupAt={outreach?.next_followup_at ?? null}
+            sentAt={outreach?.sent_at ?? null}
+          />
+        </section>
+
+        {/* Outreach draft */}
+        <section className="mt-14">
+          <span className="label">The message</span>
+          <OutreachPanel
+            companyId={company.id}
+            contacts={[...founders, ...others]}
+            initialMessage={outreach?.message_text ?? null}
+            initialContactId={outreach?.contact_id ?? null}
+          />
         </section>
 
         <div className="mt-14 flex flex-wrap gap-4">

@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { getRankedCompanies, getBatches, type Company } from "@/lib/queries";
+import {
+  getRankedCompanies,
+  getBatches,
+  getPipelineStats,
+  type Company,
+  type PipelineStats,
+} from "@/lib/queries";
 import { platformName } from "@/lib/platform-relevance";
 import { PresenceStrip, PresenceLegend } from "@/components/presence-strip";
 import { ScoreMark, StageChip } from "@/components/score-mark";
@@ -36,6 +42,7 @@ function parseFilters(params: Record<string, string | string[] | undefined>) {
     batch: one("batch") || undefined,
     hiring: one("hiring") === "1",
     minScore: Number.isFinite(min) && min > 0 ? min : undefined,
+    due: one("due") === "1",
   };
 }
 
@@ -47,9 +54,10 @@ export default async function RankedPage({
   const params = await searchParams;
   const filters = parseFilters(params);
 
-  const [companies, batches] = await Promise.all([
+  const [companies, batches, pipeline] = await Promise.all([
     getRankedCompanies(filters),
     getBatches(),
+    getPipelineStats(),
   ]);
 
   const zeroPresence = companies.filter((c) =>
@@ -59,7 +67,9 @@ export default async function RankedPage({
     })
   ).length;
   const hiring = companies.filter((c) => c.is_hiring).length;
-  const filtered = Boolean(filters.batch || filters.hiring || filters.minScore);
+  const filtered = Boolean(
+    filters.batch || filters.hiring || filters.minScore || filters.due
+  );
 
   return (
     <div className="relative overflow-hidden">
@@ -83,6 +93,8 @@ export default async function RankedPage({
           <Stat value={zeroPresence} label="zero presence" />
           <Stat value={hiring} label="hiring" />
         </div>
+
+        <Pipeline stats={pipeline} dueActive={Boolean(filters.due)} />
 
         {/* Plain GET form: filters survive refresh and links, no client JS. */}
         <form className="mt-10 flex flex-wrap items-end gap-4 border-y border-hair py-5">
@@ -126,6 +138,17 @@ export default async function RankedPage({
               className="h-3.5 w-3.5 accent-[var(--accent)]"
             />
             <span className="label-muted">Hiring only</span>
+          </label>
+
+          <label className="flex cursor-pointer items-center gap-2.5 pb-2.5">
+            <input
+              type="checkbox"
+              name="due"
+              value="1"
+              defaultChecked={filters.due}
+              className="h-3.5 w-3.5 accent-[var(--accent)]"
+            />
+            <span className="label-muted">Due for follow-up</span>
           </label>
 
           <button type="submit" className="btn mb-1">
@@ -223,5 +246,51 @@ function Stat({ value, label }: { value: number; label: string }) {
       </span>
       <span className="label-muted">{label}</span>
     </span>
+  );
+}
+
+/**
+ * The pipeline band — the numbers Ledi quotes in interviews.
+ *
+ * Deliberately a separate band from the target counts above it: those describe
+ * the market, these describe his work. Kept honest — reply rate reads "—"
+ * rather than 0% until something has actually been sent, because a 0% rate
+ * implies messages went out and failed.
+ */
+function Pipeline({
+  stats,
+  dueActive,
+}: {
+  stats: PipelineStats;
+  dueActive: boolean;
+}) {
+  const started = stats.messaged > 0 || stats.drafted > 0;
+
+  return (
+    <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-hair pt-5">
+      <span className="label">Pipeline</span>
+      <Stat value={stats.drafted} label="drafted" />
+      <Stat value={stats.messaged} label="messaged" />
+      <Stat value={stats.replied} label="replied" />
+      <Stat value={stats.meetings} label="meetings" />
+
+      <span className="flex items-baseline gap-2">
+        <span className="font-mono text-[1.1rem] font-bold tabular-nums text-text">
+          {stats.replyRate === null ? "—" : `${Math.round(stats.replyRate * 100)}%`}
+        </span>
+        <span className="label-muted">reply rate</span>
+      </span>
+
+      {stats.due > 0 ? (
+        <Link
+          href={dueActive ? "/" : "/?due=1"}
+          className={`chip ${dueActive ? "chip-on" : ""}`}
+        >
+          {stats.due} due for follow-up
+        </Link>
+      ) : (
+        started && <span className="label-muted">nothing due</span>
+      )}
+    </div>
   );
 }

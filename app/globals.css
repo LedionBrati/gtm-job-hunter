@@ -257,6 +257,15 @@ body::before {
   color: var(--text-muted);
 }
 
+/* The one field that holds prose rather than a URL or a slug: the outreach
+   draft. Mono is right for handles and wrong for 120 words of English, so this
+   opts back out of it. Same box, different face. */
+.field-prose {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
 select.field {
   appearance: none;
   background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),

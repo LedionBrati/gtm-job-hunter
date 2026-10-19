@@ -54,9 +54,15 @@ function platformGap(social: SocialRow | undefined, platform: string): { gap: nu
   if (!social || social.status === "not_found") {
     return { gap: 1, evidence: `No ${name} account found` };
   }
-  if (social.status === "found") {
-    // URL known but not enriched (Instagram/X, or LinkedIn's activity-blind actor)
-    return { gap: 0.6, evidence: `${name} account found but not yet enriched (followers/activity unknown)` };
+  // Genuinely unmeasured: the account exists but nothing was ever read off it.
+  // This is the permanent state for X and Instagram, whose Apify actors need a
+  // paid plan. Branch on `followers`, NOT on status alone: the LinkedIn actor
+  // returns follower counts but no posting activity, so an enriched LinkedIn
+  // row keeps status "found" forever. Checking status first (as this did)
+  // threw away every follower count we paid to collect and scored 455
+  // measured rows as if they were unknown.
+  if (social.followers === null) {
+    return { gap: 0.6, evidence: `${name} account found but not yet measured` };
   }
 
   const followers = social.followers ?? 0;

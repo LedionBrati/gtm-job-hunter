@@ -47,12 +47,50 @@ function extractTiktokHandle(url: string): string | null {
   return match ? match[1] : null;
 }
 
+/**
+ * LinkedIn 301s an outdated or alias company slug to its canonical one
+ * (e.g. /company/digpangolin -> /company/pangolin-net). The Apify actor does
+ * NOT follow that redirect — it just returns an empty dataset — so a stale
+ * slug silently costs an actor run and yields nothing. Resolving it ourselves
+ * is one free request.
+ *
+ * A redirect to the login wall means the stored URL is a bare numeric company
+ * id, which only resolves for signed-in users. Those can never be scraped
+ * logged-out, so return null and skip them rather than pay for a run that is
+ * guaranteed to come back as a "Login to LinkedIn" stub.
+ */
+async function resolveLinkedinSlug(slug: string): Promise<string | null> {
+  if (/^\d+$/.test(slug)) return null; // numeric id — login wall, don't bother
+  try {
+    const res = await fetch(`https://www.linkedin.com/company/${slug}`, {
+      method: "GET",
+      redirect: "manual",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.status === 200) return slug;
+    const location = res.headers.get("location");
+    if (!location) return slug;
+    if (/\/uas\/login|\/login|authwall/.test(location)) return null;
+    const match = location.match(/\/company\/([^/?#]+)/);
+    return match ? match[1] : slug;
+  } catch {
+    // Network hiccup: fall through and let the actor try the original slug.
+    return slug;
+  }
+}
+
 async function enrichLinkedin(url: string, token: string): Promise<{ followers: number | null; lastPostAt: string | null } | null> {
   // Discovery sometimes stores a company URL wrapped in extra path/query
   // noise (an admin dashboard link, a `?viewAsMember=true` tail) — the
   // actor only wants the bare company page, so we re-derive it from the
   // slug/id rather than passing the stored URL through as-is.
-  const slug = extractLinkedinSlug(url);
+  const rawSlug = extractLinkedinSlug(url);
+  if (!rawSlug) return null;
+  const slug = await resolveLinkedinSlug(rawSlug);
   if (!slug) return null;
   const cleanUrl = `https://www.linkedin.com/company/${slug}`;
 
